@@ -74,6 +74,19 @@ public class MainActivity extends AppCompatActivity {
         // Registrujemo DownloadHelper kao JavaScript Bridge
         webView.addJavascriptInterface(downloadHelper, "AndroidBridge");
 
+        // Moderno upravljanje dugmetom nazad (OnBackPressedDispatcher)
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
+
         webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
             String rawSuggestedName = android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype);
             String extension = "txt";
@@ -398,15 +411,6 @@ public class MainActivity extends AppCompatActivity {
             }
             uploadMessage.onReceiveValue(results);
             uploadMessage = null;
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
         }
     }
 }
