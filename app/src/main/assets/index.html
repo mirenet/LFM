@@ -456,6 +456,17 @@ async function loadApp(htmlContent, fileName = ""){
                 color: #555 !important;
                 outline: none;
                 -webkit-tap-highlight-color: transparent;
+                transition: filter 0.15s, background 0.15s;
+            }
+            @media (hover: hover) and (pointer: fine) {
+                .row button:hover {
+                    filter: brightness(1.25);
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+                }
+            }
+            .row button:active {
+                filter: brightness(1.25);
+                box-shadow: 0 3px 10px rgba(0,0,0,0.3);
             }
             .mask-text {
                 color: #555;
@@ -484,6 +495,8 @@ async function loadApp(htmlContent, fileName = ""){
 
         let tapCount = 0;
         let tapTimeout = null;
+        let startX = 0;
+        let startY = 0;
         const popup = shadow.getElementById("injectedPopup");
         const clearCheckbox = shadow.getElementById("injectedClearDataCheckbox");
 
@@ -524,6 +537,9 @@ async function loadApp(htmlContent, fileName = ""){
                 return;
             }
 
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+
             tapCount++;
             if (tapTimeout) clearTimeout(tapTimeout);
 
@@ -534,6 +550,20 @@ async function loadApp(htmlContent, fileName = ""){
                 tapTimeout = setTimeout(() => {
                     tapCount = 0;
                 }, 350);
+            }
+        }, { capture: true, passive: true });
+
+        document.addEventListener("touchmove", function(e) {
+            if (popup.style.display === "flex" || tapCount === 0) return;
+
+            if (e.touches.length > 0) {
+                const moveX = e.touches[0].clientX;
+                const moveY = e.touches[0].clientY;
+
+                if (Math.abs(moveX - startX) > 10 || Math.abs(moveY - startY) > 10) {
+                    tapCount = 0;
+                    if (tapTimeout) clearTimeout(tapTimeout);
+                }
             }
         }, { capture: true, passive: true });
 
@@ -688,54 +718,8 @@ document.getElementById("fileInput").addEventListener("change", function(event){
 //  EXIT BUTTON
 //========================
 document.getElementById("exitBtn").addEventListener("click", function(){
-    if (window.median && median.system && typeof median.system.exitApp === "function") {
-        median.system.exitApp();
-    } else {
-        window.close();
-    }
+    window.close();
 });
-
-//====== MEDIAN TOP & BOTTOM FIX ======//
-document.addEventListener("DOMContentLoaded", function() {
-  setTimeout(() => {
-    try {
-      median.statusbar.set({
-        color: "#000000",
-        style: "dark",
-        animated: false
-      });
-
-      median.systemNavBar.set({
-        color: "#000000",
-        style: "dark",
-        animated: false
-      });
-
-      median.systemBars.set({
-        statusBarColor: "#000000",
-        statusBarStyle: "dark",
-        systemNavBarColor: "#000000",
-        systemNavBarStyle: "dark"
-      });
-
-      median.screen.setColorScheme("dark");
-
-      if (median.appearance && median.appearance.setDarkModeEnabled) {
-        median.appearance.setDarkModeEnabled(false);
-      }
-
-      if (median.android && median.android.setSystemUiVisibility) {
-        median.android.setSystemUiVisibility(
-          "immersive, sticky, fullscreen, layout-stable, layout-hide-navigation, layout-fullscreen"
-        );
-      }
-
-    } catch (e) {
-      console.log("Median bar color error:", e);
-    }
-  }, 800);
-});
-// ====== END OF - MEDIAN FIX ======//
 
 </script>
 </body>
