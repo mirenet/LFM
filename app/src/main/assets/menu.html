@@ -543,7 +543,7 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - BEZ BRISANJA INDEXEDDB-A
+// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - SPINER, BEZ INDEXEDDB, BEZ ZATVARANJA MENIJA, RELOAD GLAVNOG EKRANA
 clearCacheBtn.addEventListener("click", async function(){
     if (clearCacheBtn.disabled) return;
     clearCacheBtn.disabled = true;
@@ -564,7 +564,7 @@ clearCacheBtn.addEventListener("click", async function(){
 
     try {
         if (isOnUrl) {
-            // Ako smo na URL-u -> brišemo samo kolačiće preko tvoje tačne Java metode
+            // Ako smo na URL-u -> brišemo samo kolačiće preko tvoje Java metode
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearTrackingAndSession === 'function') {
                 window.AndroidBridgeSaver.clearTrackingAndSession();
             }
@@ -584,9 +584,13 @@ clearCacheBtn.addEventListener("click", async function(){
         }
     } catch(err) {}
 
-    // Fiksno čekanje od 3 sekunde sa okretanjem spinera, pa reload stranice
+    // Fiksno čekanje od 3 sekunde sa okretanjem spinera, pa pozivamo novu Java metodu za reload glavnog prozora (meni ostaje otvoren)
     setTimeout(() => {
-        location.reload();
+        if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.reloadWebView === 'function') {
+            window.AndroidBridgeSaver.reloadWebView();
+        } else {
+            location.reload();
+        }
     }, 3000);
 });
 
