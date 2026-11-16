@@ -543,7 +543,7 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - SPINER, BEZ INDEXEDDB, BEZ ZATVARANJA MENIJA, RELOAD GLAVNOG EKRANA
+// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - SPINER, BEZ INDEXEDDB, BEZ ZATVARANJA MENIJA, GASENJE SPINERA I RELOAD
 clearCacheBtn.addEventListener("click", async function(){
     if (clearCacheBtn.disabled) return;
     clearCacheBtn.disabled = true;
@@ -584,8 +584,11 @@ clearCacheBtn.addEventListener("click", async function(){
         }
     } catch(err) {}
 
-    // Fiksno čekanje od 3 sekunde sa okretanjem spinera, pa pozivamo novu Java metodu za reload glavnog prozora (meni ostaje otvoren)
+    // Nakon 3 sekunde: gasimo spiner, otključavamo dugme i pozivamo Java reload glavnog prozora
     setTimeout(() => {
+        cacheSpinnerBox.classList.remove("spinning");
+        clearCacheBtn.disabled = false;
+
         if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.reloadWebView === 'function') {
             window.AndroidBridgeSaver.reloadWebView();
         } else {
