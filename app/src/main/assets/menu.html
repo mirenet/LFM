@@ -548,7 +548,7 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA ČIŠĆENJE KEŠA - UKLJUČUJE I ČIŠĆENJE ISTORIJE NAKON RELOAD-A
+// LOGIKA ZA ČIŠĆENJE KEŠA - PROSLEĐUJE TRENUTNI URL U JAVA METODU
 cacheSpinnerBox.addEventListener("click", async function(e){
     e.stopPropagation();
     if (cacheSpinnerBox.classList.contains("spinning")) return;
@@ -570,7 +570,7 @@ cacheSpinnerBox.addEventListener("click", async function(e){
     try {
         if (isOnUrl) {
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearTrackingAndSession === 'function') {
-                window.AndroidBridgeSaver.clearTrackingAndSession();
+                window.AndroidBridgeSaver.clearTrackingAndSession(currentUrl);
             }
         } else {
             localStorage.clear();
