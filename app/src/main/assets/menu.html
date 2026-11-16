@@ -548,7 +548,7 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA ČIŠĆENJE KEŠA - SLUŠA KLIK ISKLJUČIVO NA IKONICU SPINERA
+// LOGIKA ZA ČIŠĆENJE KEŠA - UKLJUČUJE I ČIŠĆENJE ISTORIJE NAKON RELOAD-A
 cacheSpinnerBox.addEventListener("click", async function(e){
     e.stopPropagation();
     if (cacheSpinnerBox.classList.contains("spinning")) return;
@@ -595,6 +595,14 @@ cacheSpinnerBox.addEventListener("click", async function(e){
         } else {
             location.reload();
         }
+
+        // Čišćenje istorije nakon reload-a da dugme Back radi iz prve
+        setTimeout(() => {
+            if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearHistory === 'function') {
+                window.AndroidBridgeSaver.clearHistory();
+            }
+        }, 300);
+
     }, 3000);
 });
 
