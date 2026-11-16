@@ -66,7 +66,7 @@ button:focus, button:active, input:focus, textarea:focus {
 }
 
 #configModal {
-  padding-bottom: 16px !important; /* config window size - from bottom text area */
+  padding-bottom: 16px !important;
 }
 
 #configModal textarea {
@@ -97,7 +97,7 @@ button:focus, button:active, input:focus, textarea:focus {
 #configModal .popup-header {
     position: relative;
     justify-content: center;
-    margin-bottom: 12px; /* from title to config */
+    margin-bottom: 12px;
 }
 
 #configModal .popup-header h3 {
@@ -148,7 +148,7 @@ button:focus, button:active, input:focus, textarea:focus {
 
 /* Input groups */
 .input-group {
-    margin-bottom: 12px; /* 12px - from input */
+    margin-bottom: 12px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -238,84 +238,66 @@ button:focus, button:active, input:focus, textarea:focus {
     display: none;
 }
 
-/* Checkbox container */
-.checkbox-row {
-    -webkit-tap-highlight-color: transparent;
-    appearance: none;
+/* Red za čišćenje keša sa spinerom */
+.clear-cache-row {
     margin: 8px 0 0px 2px;
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    color: #DADADA;
-    font-size: 14px;
-    text-align: left;
-    min-height: 22px;
-    box-sizing: border-box;
     width: 100%;
 }
 
-.checkbox-row label {
+.clear-cache-btn {
+    background: none;
+    border: none;
     color: #DADADA;
     font-size: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 11px;
+    padding: 0;
+    outline: none;
     user-select: none;
     text-align: left;
+    transition: color 0.15s;
 }
 
-/* Custom Checkbox */
-.checkbox-row label input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
+.clear-cache-btn:hover {
+    color: var(--btn-accent);
+}
+
+/* Stil za prilagođeni spiner umesto checkbox-a */
+.spinner-box {
     width: 16px;
     height: 16px;
     background-color: #262822; 
     border: 1.5px solid #555b35;
     border-radius: 4px;
-    cursor: pointer;
-    outline: none;
-    margin: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: filter 0.15s, background-color 0.15s, border-color 0.15s;
-    position: relative;
     box-sizing: border-box;
     flex-shrink: 0;
 }
 
-.checkbox-row label input[type="checkbox"]::after {
-    content: "";
-    width: 3px;
-    height: 8px;
-    border: solid #555;
-    border-width: 0 2px 2px 0;
-    transform: rotate(40deg) scale(0);
-    transition: transform 0.15s ease-in-out;
-    position: relative;
-    top: -1px;
-    filter: brightness(0); 
+.spinner-box svg {
+    width: 10px;
+    height: 10px;
+    stroke: var(--btn-accent);
+    stroke-width: 2.5;
+    fill: none;
+    animation: none;
 }
 
-.checkbox-row label input[type="checkbox"]:checked {
-    background-color: var(--btn-accent);
-    border-color: var(--btn-accent);
+/* Klasa koja pokreće rotaciju spinera */
+.spinner-box.spinning svg {
+    animation: rotateSpinner 0.8s linear infinite;
 }
 
-.checkbox-row label input[type="checkbox"]:checked::after {
-    transform: rotate(40deg) scale(1);
-}
-
-@media (hover: hover) and (pointer: fine) {
-    .checkbox-row label input[type="checkbox"]:hover {
-        filter: brightness(1.25);
-    }
-}
-
-.checkbox-row label input[type="checkbox"]:active {
-    filter: brightness(1.25);
+@keyframes rotateSpinner {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Button row */
@@ -391,11 +373,16 @@ button:focus, button:active, input:focus, textarea:focus {
         </div>
     </div>
 
-    <div class="checkbox-row" style="margin-bottom: -2px;">
-        <label>
-            <input type="checkbox" id="clearDataCheckbox">
+    <!-- Novo dugme za čišćenje keša sa spinerom -->
+    <div class="clear-cache-row" style="margin-bottom: -2px;">
+        <button type="button" id="clearCacheBtn" class="clear-cache-btn">
+            <span class="spinner-box" id="cacheSpinnerBox">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+            </span>
             <span>Clear local cache and data</span>
-        </label>
+        </button>
     </div>
     
     <div class="row" style="margin-bottom: -4px;">
@@ -474,35 +461,6 @@ async function getSavedApp(){
     });
 }
 
-async function saveSetting(key, value){
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put(value, key);
-}
-
-async function getSetting(key){
-    const db = await openDB();
-    return new Promise(resolve => {
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.get(key);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => resolve(undefined);
-    });
-}
-
-async function initPreferences() {
-    const clearCheckbox = document.getElementById("clearDataCheckbox");
-    if (!clearCheckbox) return;
-    const savedState = await getSetting("clearCachePreference");
-    clearCheckbox.checked = (savedState === undefined || savedState === null) ? false : savedState;
-
-    clearCheckbox.addEventListener("change", function() {
-        saveSetting("clearCachePreference", clearCheckbox.checked);
-    });
-}
-
 const configModal = document.getElementById("configModal");
 const mainPopup = document.getElementById("mainPopup");
 const configTextArea = document.getElementById("configTextArea");
@@ -510,6 +468,8 @@ const startUrlInput = document.getElementById("startUrlInput");
 const htmlFileInput = document.getElementById("htmlFileInput");
 const urlLoadBtn = document.getElementById("urlLoadBtn");
 const loadBtn = document.getElementById("loadBtn");
+const clearCacheBtn = document.getElementById("clearCacheBtn");
+const cacheSpinnerBox = document.getElementById("cacheSpinnerBox");
 
 function updateStartUrlInputFromConfig() {
     let urlFound = "";
@@ -558,8 +518,6 @@ document.getElementById("saveConfigBtn").addEventListener("click", () => {
     }
 });
 
-initPreferences();
-
 const urlParams = new URLSearchParams(window.location.search);
 const isMenuOverlay = urlParams.get('menu') === 'true';
 
@@ -585,29 +543,72 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
+// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - BEZ BRISANJA INDEXEDDB-A
+clearCacheBtn.addEventListener("click", async function(){
+    if (clearCacheBtn.disabled) return;
+    clearCacheBtn.disabled = true;
+    cacheSpinnerBox.classList.add("spinning");
+
+    let currentUrl = "";
+    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
+        try {
+            const raw = window.AndroidBridgeSaver.loadConfigFileRaw();
+            const match = raw.match(/startURL\s*:\s*["']([^"']+)["']/i);
+            if (match && match[1]) {
+                currentUrl = match[1].trim();
+            }
+        } catch(e) {}
+    }
+
+    const isOnUrl = currentUrl !== "" && (currentUrl.startsWith("http://") || currentUrl.startsWith("https://"));
+
+    try {
+        if (isOnUrl) {
+            // Ako smo na URL-u -> brišemo samo kolačiće preko tvoje tačne Java metode
+            if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearTrackingAndSession === 'function') {
+                window.AndroidBridgeSaver.clearTrackingAndSession();
+            }
+        } else {
+            // Ako smo na HTML-u -> brišemo lokalni storage i keš, a IndexedDB OSTAJE NETAKNUT!
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                for (const name of cacheNames) {
+                    await caches.delete(name);
+                }
+            }
+        }
+    } catch(err) {}
+
+    // Fiksno čekanje od 3 sekunde sa okretanjem spinera, pa reload stranice
+    setTimeout(() => {
+        location.reload();
+    }, 3000);
+});
+
 htmlFileInput.addEventListener("change", async function(event){
     const file = event.target.files[0];
     if(file){
         const fileName = file.name ? file.name.toLowerCase() : "";
         if(file.type === "text/html" || file.type === "" || fileName.endsWith(".html") || fileName.endsWith(".htm")){
-            const clearCheckbox = document.getElementById("clearDataCheckbox");
-            const shouldClearData = clearCheckbox && clearCheckbox.checked;
-
-            if (shouldClearData) {
-                try {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    document.cookie.split(";").forEach(function(c) { 
-                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                    });
-                    if ('caches' in window) {
-                        const cacheNames = await caches.keys();
-                        for (const name of cacheNames) {
-                            await caches.delete(name);
-                        }
+            
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (const name of cacheNames) {
+                        await caches.delete(name);
                     }
-                } catch(err) {}
-            }
+                }
+            } catch(err) {}
 
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearStartUrl === 'function') {
                 window.AndroidBridgeSaver.clearStartUrl();
@@ -653,7 +654,6 @@ htmlFileInput.addEventListener("change", async function(event){
     }
 });
 
-// 3. DUGME SA STRELICOM (->) -> Prelazak sa HTML-a na URL: briše samo LocalStorage i IndexedDB aplikacije ako je čekirano
 urlLoadBtn.addEventListener("click", async function(){
     let inputValue = startUrlInput.value.trim();
 
@@ -668,20 +668,12 @@ urlLoadBtn.addEventListener("click", async function(){
         return; 
     }
 
-    const clearCheckbox = document.getElementById("clearDataCheckbox");
-    const shouldClearData = clearCheckbox && clearCheckbox.checked;
+    try {
+        localStorage.clear();
+    } catch(err) {}
 
-    // Ako je čekirano, brišemo SAMO LocalStorage ove aplikacije (bez teškog sistemskog keša)
-    if (shouldClearData) {
-        try {
-            localStorage.clear();
-        } catch(err) {}
-    }
-
-    // Obavezno brišemo sačuvani HTML iz IndexedDB baze da se ne bi vratio stari fajl
     await clearSavedApp(); 
 
-    // Čekamo da se sačuva nova konfiguracija sa URL-om
     if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
         let rawConfig = window.AndroidBridgeSaver.loadConfigFileRaw();
         if (/startURL\s*:/i.test(rawConfig)) {
@@ -696,7 +688,6 @@ urlLoadBtn.addEventListener("click", async function(){
         window.AndroidMenuBridge.closeMenu();
     }
 
-    // Stabilna pauza od 200ms pred restart da se sve čisto upisano sačuva iz prvog klika
     setTimeout(() => {
         if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.restartApp === 'function') {
             window.AndroidBridgeSaver.restartApp();
