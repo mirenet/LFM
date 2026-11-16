@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Loader UI</title>
+
+<!-- Učitavanje konfiguracije -->
+<script src="appConfig.js"></script>
+
+<style>
+:root{
+    --main-background: transparent;
+    --btn-accent: #CBD868;
+    --btn-hover: #A4A25C;
+    --btn-active: #8C7F6F;
+}
+
+/* Back. */
+html, body{
+    margin:0;
+    height:100%;
+    font-family: Inter, Arial, sans-serif;
+    background: var(--main-background);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    user-select: none;    
+}
+
+/* Uklanjanje plavog browser highlight-a sa svih dugmadi i interaktivnih elemenata */
+button, input, textarea {
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+button:focus, button:active, input:focus, textarea:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Popup */
+.popup{
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 32px);
+    max-width: 340px;
+    background: #1a1a1c;
+    border-radius: 10px;
+    border: none;
+    padding: 22px 18px;
+    box-shadow: 0 0 0 0.9px #7C874F;
+    box-sizing: border-box;
+    overflow: hidden;
+    word-wrap: break-word;
+    z-index: 1000;
+}
+
+.popup.active {
+    display: flex;
+}
+
+#configModal {
+  padding-bottom: 16px !important; /* config window size - from bottom text area */
+}
+
+#configModal textarea {
+    height: 204px !important;
+}
+
+/* Popup Header */
+.popup-header {
+    display: flex;
+    align-items: center;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+/* Title */
+.popup h3{
+    margin: 0;
+    margin-top: -0.8px;
+    margin-bottom: 4px;
+    color: #CBD868;
+    font-size: 17px;
+    font-weight: 600;
+    flex-grow: 1;
+    text-align: center;
+}
+
+#configModal .popup-header {
+    position: relative;
+    justify-content: center;
+    margin-bottom: 12px; /* from title to config */
+}
+
+#configModal .popup-header h3 {
+    text-align: center !important;
+    margin: 0 !important;
+    flex-grow: 1;
+}
+
+.settings-icon-btn {
+    margin-top: 0px;
+    margin-left: -7px;
+    margin-right: 5px;
+    margin-bottom: 4px;
+    background: none;
+    border: none;
+    color: #CBD868;
+    cursor: pointer;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    outline: none;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .settings-icon-btn:hover {
+        background: rgba(203, 216, 104, 0.1);
+    }
+}
+
+.settings-icon-btn:active {
+    background: rgba(203, 216, 104, 0.1);
+}
+
+.settings-icon-btn svg {
+    width: 16.6px;
+    height: 16.6px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+/* Input groups */
+.input-group {
+    margin-bottom: 12px; /* 12px - from input */
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.input-group label {
+    color: #DADADA;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 4.5px;
+}
+
+/* Wrapper za input i SVG ikonicu */
+.url-input-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.input-group input[type="text"] {
+    width: 100%;
+    padding: 10px 38px 10px 10px;
+    margin-top: 4px;
+    border-radius: 10px;
+    background: #1A1A1A;
+    color: #9E9DA4;
+    border: none;
+    box-sizing: border-box;
+    font-size: 14px; 
+    outline: none;
+    box-shadow: 0 0 0 0.8px #606060;
+    font-family: Inter, Arial, sans-serif;
+}
+
+.input-group input[type="text"]:focus {
+    outline: 1px solid #888888 !important;
+    box-shadow: 0 0 0 0.8px #606060 !important;
+    color: #9E9DA4;
+}
+
+/* Dugme sa lepom strelicom za učitavanje URL-a */
+.url-load-btn {
+    position: absolute;
+    right: 6px;
+    top: 54%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #8B8B8B;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .url-load-btn:hover {
+        background: rgba(203, 216, 104, 0.1);
+        color: #CBD868;
+    }
+}
+
+.url-load-btn:active {
+    background: rgba(203, 216, 104, 0.1);
+    color: #CBD868;
+}
+
+.url-load-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+#htmlFileInput {
+    display: none;
+}
+
+/* Checkbox container */
+.checkbox-row {
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    margin: 8px 0 0px 2px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    color: #DADADA;
+    font-size: 14px;
+    text-align: left;
+    min-height: 22px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.checkbox-row label {
+    color: #DADADA;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    user-select: none;
+    text-align: left;
+}
+
+/* Custom Checkbox */
+.checkbox-row label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background-color: #262822; 
+    border: 1.5px solid #555b35;
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter 0.15s, background-color 0.15s, border-color 0.15s;
+    position: relative;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.checkbox-row label input[type="checkbox"]::after {
+    content: "";
+    width: 3px;
+    height: 8px;
+    border: solid #555;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg) scale(0);
+    transition: transform 0.15s ease-in-out;
+    position: relative;
+    top: -1px;
+    filter: brightness(0); 
+}
+
+.checkbox-row label input[type="checkbox"]:checked {
+    background-color: var(--btn-accent);
+    border-color: var(--btn-accent);
+}
+
+.checkbox-row label input[type="checkbox"]:checked::after {
+    transform: rotate(40deg) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .checkbox-row label input[type="checkbox"]:hover {
+        filter: brightness(1.25);
+    }
+}
+
+.checkbox-row label input[type="checkbox"]:active {
+    filter: brightness(1.25);
+}
+
+/* Button row */
+.row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.row button{
+    flex: 1 1 0;
+    width: 0;
+    min-width: 30%;
+    max-width: 60%;
+    box-sizing: border-box;
+    padding: 11px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    background-color: var(--btn-accent) !important;
+    color: #555 !important;
+    outline: none;
+    transition: filter 0.15s, box-shadow 0.15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .row button:hover{
+        filter: brightness(1.25);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+}
+
+.row button:active{
+    filter: brightness(1.25);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+
+.mask-text{
+    color: #555;
+    filter: brightness(0);
+    pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<!-- MAIN POPUP -->
+<div id="mainPopup" class="popup">
+    <div class="popup-header">
+        <span style="width: 32px;"></span>
+        <h3>Settings</h3>
+        <button id="openConfigBtn" class="settings-icon-btn" title="Edit config">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l-.06-.06a2 2 0 0 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+            </svg>
+        </button>
+    </div>
+    
+    <div class="input-group">
+        <div class="url-input-wrapper">
+            <input type="text" id="startUrlInput" placeholder="Enter url adres..">
+            <button type="button" class="url-load-btn" id="urlLoadBtn" title="Load URL">
+                <svg viewBox="0 0 24 24">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+            <input type="file" id="htmlFileInput" accept=".html,.htm">
+        </div>
+    </div>
+
+    <div class="checkbox-row" style="margin-bottom: -2px;">
+        <label>
+            <input type="checkbox" id="clearDataCheckbox">
+            <span>Clear local cache and data</span>
+        </label>
+    </div>
+    
+    <div class="row" style="margin-bottom: -4px;">
+        <button id="loadBtn"><span class="mask-text">File</span></button>
+        <button id="exitBtn"><span class="mask-text">Close</span></button>
+    </div>
+</div>
+
+<!-- EDITOR MODAL (CONFIG) -->
+<div class="popup" id="configModal">
+    <div class="popup-header">
+        <h3>Config..</h3>
+    </div>
+    <textarea id="configTextArea" style="width:100%; height:204px; background:#111; color:#CBD868; border:1.5px solid #555b35; border-radius:8px; padding:10px; font-family:monospace; font-size:12px; box-sizing:border-box; outline:none; resize:none;"></textarea>
+    <div class="row" style="margin-top:15px;">
+        <button id="saveConfigBtn"><span class="mask-text">Save</span></button>
+        <button id="closeConfigBtn"><span class="mask-text">Close</span></button>
+    </div>
+</div>
+
+<script>
+const DB_NAME = "LDR_DB";
+const STORE_NAME = "apps";
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = function(e) {
+            e.target.result.createObjectStore(STORE_NAME);
+        };
+        request.onsuccess = function(e) { resolve(e.target.result); };
+        request.onerror = function() { reject("IndexedDB error"); };
+    });
+}
+
+async function saveApp(htmlContent, fileName = "app.html"){
+    const db = await openDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.put(htmlContent, "userApp");
+        store.put(fileName, "userAppName");
+        tx.oncomplete = () => resolve();
+    });
+}
+
+async function clearSavedApp(){
+    const db = await openDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.delete("userApp");
+        store.delete("userAppName");
+        tx.oncomplete = () => resolve();
+    });
+}
+
+async function getSavedApp(){
+    const db = await openDB();
+    return new Promise(resolve => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const reqApp = store.get("userApp");
+        const reqName = store.get("userAppName");
+        
+        let result = {};
+        reqApp.onsuccess = () => {
+            result.content = reqApp.result;
+            if (result.content !== undefined && result.name !== undefined) resolve(result);
+        };
+        reqName.onsuccess = () => {
+            result.name = reqName.result;
+            if (result.content !== undefined && result.name !== undefined) resolve(result);
+        };
+        setTimeout(() => resolve(null), 350);
+    });
+}
+
+async function saveSetting(key, value){
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.put(value, key);
+}
+
+async function getSetting(key){
+    const db = await openDB();
+    return new Promise(resolve => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(undefined);
+    });
+}
+
+async function initPreferences() {
+    const clearCheckbox = document.getElementById("clearDataCheckbox");
+    if (!clearCheckbox) return;
+    const savedState = await getSetting("clearCachePreference");
+    clearCheckbox.checked = (savedState === undefined || savedState === null) ? false : savedState;
+
+    clearCheckbox.addEventListener("change", function() {
+        saveSetting("clearCachePreference", clearCheckbox.checked);
+    });
+}
+
+const configModal = document.getElementById("configModal");
+const mainPopup = document.getElementById("mainPopup");
+const configTextArea = document.getElementById("configTextArea");
+const startUrlInput = document.getElementById("startUrlInput");
+const htmlFileInput = document.getElementById("htmlFileInput");
+const urlLoadBtn = document.getElementById("urlLoadBtn");
+const loadBtn = document.getElementById("loadBtn");
+
+function updateStartUrlInputFromConfig() {
+    let urlFound = "";
+    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
+        try {
+            const raw = window.AndroidBridgeSaver.loadConfigFileRaw();
+            const match = raw.match(/startURL\s*:\s*["']([^"']+)["']/i);
+            if (match && match[1] && match[1].trim() !== "") {
+                urlFound = match[1].trim();
+            }
+        } catch(e) {}
+    }
+    
+    if (!urlFound && typeof window.startURL === 'string' && window.startURL.trim() !== '') {
+        urlFound = window.startURL.trim();
+    } else if (!urlFound && typeof window.startUrl === 'string' && window.startUrl.trim() !== '') {
+        urlFound = window.startUrl.trim();
+    }
+
+    startUrlInput.value = urlFound;
+}
+
+updateStartUrlInputFromConfig();
+
+document.getElementById("openConfigBtn").addEventListener("click", () => {
+    mainPopup.classList.remove("active");
+    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
+        configTextArea.value = window.AndroidBridgeSaver.loadConfigFileRaw();
+    } else {
+        configTextArea.value = "// Bridge not available";
+    }
+    configModal.classList.add("active");
+});
+
+document.getElementById("closeConfigBtn").addEventListener("click", () => {
+    configModal.classList.remove("active");
+    mainPopup.classList.add("active");
+});
+
+document.getElementById("saveConfigBtn").addEventListener("click", () => {
+    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.saveConfigFile === 'function') {
+        window.AndroidBridgeSaver.saveConfigFile(configTextArea.value);
+        window.AndroidBridgeSaver.restartApp();
+    } else {
+        alert("Bridge not available!");
+    }
+});
+
+initPreferences();
+
+const urlParams = new URLSearchParams(window.location.search);
+const isMenuOverlay = urlParams.get('menu') === 'true';
+
+if (!isMenuOverlay) {
+    getSavedApp().then(saved => {
+        if (saved && saved.content) {
+            document.open();
+            document.write(saved.content);
+            document.close();
+        } else if ((typeof window.startURL === 'string' && window.startURL.trim() !== '') || (typeof window.startUrl === 'string' && window.startUrl.trim() !== '')) {
+            return;
+        } else {
+            updateStartUrlInputFromConfig(); 
+            mainPopup.classList.add("active");
+        }
+    });
+} else {
+    updateStartUrlInputFromConfig(); 
+    mainPopup.classList.add("active");
+}
+
+loadBtn.addEventListener("click", function(){
+    htmlFileInput.click();
+});
+
+htmlFileInput.addEventListener("change", async function(event){
+    const file = event.target.files[0];
+    if(file){
+        const fileName = file.name ? file.name.toLowerCase() : "";
+        if(file.type === "text/html" || file.type === "" || fileName.endsWith(".html") || fileName.endsWith(".htm")){
+            const clearCheckbox = document.getElementById("clearDataCheckbox");
+            const shouldClearData = clearCheckbox && clearCheckbox.checked;
+
+            if (shouldClearData) {
+                try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    document.cookie.split(";").forEach(function(c) { 
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                    });
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        for (const name of cacheNames) {
+                            await caches.delete(name);
+                        }
+                    }
+                } catch(err) {}
+            }
+
+            if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearStartUrl === 'function') {
+                window.AndroidBridgeSaver.clearStartUrl();
+            } else {
+                if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
+                    let rawConfig = window.AndroidBridgeSaver.loadConfigFileRaw();
+                    rawConfig = rawConfig.replace(/startURL\s*:\s*["'][^"']*["']/gi, 'startURL: ""');
+                    window.AndroidBridgeSaver.saveConfigFile(rawConfig);
+                }
+            }
+
+            await clearSavedApp();
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const htmlContent = e.target.result;
+                
+                await saveApp(htmlContent, file.name);
+
+                startUrlInput.value = "";
+
+                if (window.AndroidMenuBridge && typeof window.AndroidMenuBridge.closeMenu === 'function') {
+                    window.AndroidMenuBridge.closeMenu();
+                }
+
+                if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.reloadMainApp === 'function') {
+                    window.AndroidBridgeSaver.reloadMainApp();
+                } else {
+                    location.reload();
+                }
+
+                setTimeout(() => {
+                    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearHistory === 'function') {
+                        window.AndroidBridgeSaver.clearHistory();
+                    }
+                }, 300);
+            };
+            reader.readAsText(file);
+        } else {
+            alert("Please select a valid HTML file.");
+            htmlFileInput.value = "";
+        }
+    }
+});
+
+// 3. DUGME SA STRELICOM (->) -> Prelazak sa HTML-a na URL: briše samo LocalStorage i IndexedDB aplikacije ako je čekirano
+urlLoadBtn.addEventListener("click", async function(){
+    let inputValue = startUrlInput.value.trim();
+
+    if (inputValue !== "") {
+        if (inputValue.startsWith("http://")) {
+            inputValue = inputValue.replace("http://", "https://");
+        } else if (!inputValue.startsWith("https://")) {
+            inputValue = "https://" + inputValue;
+        }
+        startUrlInput.value = inputValue;
+    } else {
+        return; 
+    }
+
+    const clearCheckbox = document.getElementById("clearDataCheckbox");
+    const shouldClearData = clearCheckbox && clearCheckbox.checked;
+
+    // Ako je čekirano, brišemo SAMO LocalStorage ove aplikacije (bez teškog sistemskog keša)
+    if (shouldClearData) {
+        try {
+            localStorage.clear();
+        } catch(err) {}
+    }
+
+    // Obavezno brišemo sačuvani HTML iz IndexedDB baze da se ne bi vratio stari fajl
+    await clearSavedApp(); 
+
+    // Čekamo da se sačuva nova konfiguracija sa URL-om
+    if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.loadConfigFileRaw === 'function') {
+        let rawConfig = window.AndroidBridgeSaver.loadConfigFileRaw();
+        if (/startURL\s*:/i.test(rawConfig)) {
+            rawConfig = rawConfig.replace(/startURL\s*:\s*["'][^"']*["']/gi, 'startURL: "' + inputValue + '"');
+        } else {
+            rawConfig = rawConfig.replace(/\{/, '{\n    startURL: "' + inputValue + '",');
+        }
+        window.AndroidBridgeSaver.saveConfigFile(rawConfig);
+    }
+
+    if (window.AndroidMenuBridge && typeof window.AndroidMenuBridge.closeMenu === 'function') {
+        window.AndroidMenuBridge.closeMenu();
+    }
+
+    // Stabilna pauza od 200ms pred restart da se sve čisto upisano sačuva iz prvog klika
+    setTimeout(() => {
+        if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.restartApp === 'function') {
+            window.AndroidBridgeSaver.restartApp();
+        } else {
+            location.reload();
+        }
+    }, 200);
+});
+
+document.getElementById("exitBtn").addEventListener("click", function(){
+    updateStartUrlInputFromConfig(); 
+    
+    if (window.AndroidMenuBridge && typeof window.AndroidMenuBridge.closeMenu === 'function') {
+        window.AndroidMenuBridge.closeMenu();
+    } else {
+        window.close();
+    }
+});
+</script>
+</body>
+</html>
