@@ -238,7 +238,7 @@ button:focus, button:active, input:focus, textarea:focus {
     display: none;
 }
 
-/* Red za čišćenje keša sa spinerom */
+/* Red za čišćenje keša */
 .clear-cache-row {
     margin: 8px 0 0px 2px;
     display: flex;
@@ -250,42 +250,46 @@ button:focus, button:active, input:focus, textarea:focus {
 .clear-cache-btn {
     background: none;
     border: none;
-    color: #DADADA;
+    color: #DADADA; 
     font-size: 14px;
-    cursor: pointer;
+    cursor: default; 
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 6px;
     padding: 0;
     outline: none;
     user-select: none;
     text-align: left;
-    transition: color 0.15s;
 }
 
-.clear-cache-btn:hover {
-    color: var(--btn-accent);
-}
-
-/* Stil za prilagođeni spiner umesto checkbox-a */
+/* Stil za spiner */
 .spinner-box {
-    width: 16px;
-    height: 16px;
-    background-color: #262822; 
-    border: 1.5px solid #555b35;
-    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
     flex-shrink: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
+}
+
+.spinner-box:focus, .spinner-box:active {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .spinner-box svg {
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
     stroke: var(--btn-accent);
-    stroke-width: 2.5;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
     fill: none;
     animation: none;
 }
@@ -373,16 +377,17 @@ button:focus, button:active, input:focus, textarea:focus {
         </div>
     </div>
 
-    <!-- Dugme za čišćenje keša sa spinerom (jedino mesto gde se keš briše) -->
+    <!-- Red za čišćenje keša -->
     <div class="clear-cache-row" style="margin-bottom: -2px;">
-        <button type="button" id="clearCacheBtn" class="clear-cache-btn">
+        <div id="clearCacheBtn" class="clear-cache-btn">
             <span class="spinner-box" id="cacheSpinnerBox">
                 <svg viewBox="0 0 24 24">
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M21 13a9 9 0 1 1-3-7.7L21 8"></path>
                 </svg>
             </span>
             <span>Clear local cache and data</span>
-        </button>
+        </div>
     </div>
     
     <div class="row" style="margin-bottom: -4px;">
@@ -543,10 +548,10 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA DUGME "CLEAR CACHE" - JEDINO MESTO GDE SE ČISTI KEŠ I PODACI
-clearCacheBtn.addEventListener("click", async function(){
-    if (clearCacheBtn.disabled) return;
-    clearCacheBtn.disabled = true;
+// LOGIKA ZA ČIŠĆENJE KEŠA - SLUŠA KLIK ISKLJUČIVO NA IKONICU SPINERA
+cacheSpinnerBox.addEventListener("click", async function(e){
+    e.stopPropagation();
+    if (cacheSpinnerBox.classList.contains("spinning")) return;
     cacheSpinnerBox.classList.add("spinning");
 
     let currentUrl = "";
@@ -564,12 +569,10 @@ clearCacheBtn.addEventListener("click", async function(){
 
     try {
         if (isOnUrl) {
-            // Ako smo na URL-u -> brišemo kolačiće preko Jave
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearTrackingAndSession === 'function') {
                 window.AndroidBridgeSaver.clearTrackingAndSession();
             }
         } else {
-            // Ako smo na HTML-u -> brišemo lokalni storage i keš, a IndexedDB LDR_DB OSTAJE NETAKNUT!
             localStorage.clear();
             sessionStorage.clear();
             document.cookie.split(";").forEach(function(c) { 
@@ -584,10 +587,8 @@ clearCacheBtn.addEventListener("click", async function(){
         }
     } catch(err) {}
 
-    // Nakon 3 sekunde: gasimo spiner, otključavamo dugme i pozivamo Java reload glavnog prozora (meni ostaje otvoren)
     setTimeout(() => {
         cacheSpinnerBox.classList.remove("spinning");
-        clearCacheBtn.disabled = false;
 
         if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.reloadWebView === 'function') {
             window.AndroidBridgeSaver.reloadWebView();
@@ -597,7 +598,7 @@ clearCacheBtn.addEventListener("click", async function(){
     }, 3000);
 });
 
-// UVOZ FAJLA - NEMA BRISANJA KEŠA, SAMO UPIS NOVOG FAJLA
+// UVOZ FAJLA - BEZ BRISANJA KEŠA
 htmlFileInput.addEventListener("change", async function(event){
     const file = event.target.files[0];
     if(file){
@@ -648,7 +649,7 @@ htmlFileInput.addEventListener("change", async function(event){
     }
 });
 
-// UNOS I UČITAVANJE URL-a - NEMA BRISANJA KEŠA, SAMO UPIS U CONFIG
+// UNOS I UČITAVANJE URL-a - BEZ BRISANJA KEŠA
 urlLoadBtn.addEventListener("click", async function(){
     let inputValue = startUrlInput.value.trim();
 
