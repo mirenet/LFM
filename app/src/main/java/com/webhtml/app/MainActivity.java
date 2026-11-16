@@ -717,16 +717,21 @@ public class MainActivity extends AppCompatActivity {
         ((MainActivity) mContext).runOnUiThread(() -> {
             MainActivity act = (MainActivity) mContext;
             if (act.webView != null) {
-                // Ako je postavljen URL, ponovo učitaj taj URL, inače uradi običan reload
+                // Osvežavamo konfiguraciju iz memorije da budemo sigurni šta je aktuelno
+                act.loadConfigFromInternalStorage();
+                
                 if (act.startURL != null && !act.startURL.trim().isEmpty() && !act.startURL.startsWith("file:///")) {
+                    // Ako je podešen URL, učitaj ga ponovo
                     act.webView.loadUrl(act.startURL);
                 } else {
+                    // Ako je HTML fajl u pitanju, očisti istoriju unazad da se ne vraća na staro i uradi reload
+                    act.webView.clearHistory();
                     act.webView.reload();
                     }
-                  }
-               });
-            }
-         }
+                 }
+             });
+           }
+        }
 
         @Keep
         @JavascriptInterface
