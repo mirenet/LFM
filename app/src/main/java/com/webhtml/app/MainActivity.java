@@ -756,13 +756,25 @@ public class MainActivity extends AppCompatActivity {
 
         @Keep
         @JavascriptInterface
-        public void clearTrackingAndSession() {
-         try {
-         android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
-            cookieManager.removeAllCookies(null);
-            cookieManager.flush();
-             } catch (Exception ignored) {}
-         }
+        public void clearTrackingAndSession(String url) {
+        try {
+        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        String cookies = cookieManager.getCookie(url);
+        if (cookies != null) {
+            String[] cookiePairs = cookies.split(";");
+            for (String cookiePair : cookiePairs) {
+                String[] parts = cookiePair.split("=", 2);
+                if (parts.length > 0) {
+                    String cookieName = parts[0].trim();
+                    // Poništavamo kolačić za dati URL postavljanjem datuma isteka u prošlost
+                    String expiredCookie = cookieName + "=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/";
+                    cookieManager.setCookie(url, expiredCookie);
+                   }
+                 }
+                cookieManager.flush();
+              }
+           } catch (Exception ignored) {}
+        }
     
         @Keep
         @JavascriptInterface
