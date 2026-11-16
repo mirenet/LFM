@@ -730,6 +730,16 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         }
+
+        @Keep
+        @JavascriptInterface
+        public void clearTrackingAndSession() {
+         try {
+         android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+            cookieManager.removeAllCookies(null);
+            cookieManager.flush();
+             } catch (Exception ignored) {}
+         }
     
         @Keep
         @JavascriptInterface
