@@ -712,6 +712,24 @@ public class MainActivity extends AppCompatActivity {
 
         @Keep
         @JavascriptInterface
+        public void reloadWebView() {
+        if (mContext instanceof MainActivity) {
+        ((MainActivity) mContext).runOnUiThread(() -> {
+            MainActivity act = (MainActivity) mContext;
+            if (act.webView != null) {
+                // Ako je postavljen URL, ponovo učitaj taj URL, inače uradi običan reload
+                if (act.startURL != null && !act.startURL.trim().isEmpty() && !act.startURL.startsWith("file:///")) {
+                    act.webView.loadUrl(act.startURL);
+                } else {
+                    act.webView.reload();
+                    }
+                  }
+               });
+            }
+         }
+
+        @Keep
+        @JavascriptInterface
         public void clearAppCacheAndData() {
             if (mContext instanceof MainActivity) {
                 ((MainActivity) mContext).runOnUiThread(() -> {
