@@ -373,7 +373,7 @@ button:focus, button:active, input:focus, textarea:focus {
         </div>
     </div>
 
-    <!-- Novo dugme za čišćenje keša sa spinerom -->
+    <!-- Dugme za čišćenje keša sa spinerom (jedino mesto gde se keš briše) -->
     <div class="clear-cache-row" style="margin-bottom: -2px;">
         <button type="button" id="clearCacheBtn" class="clear-cache-btn">
             <span class="spinner-box" id="cacheSpinnerBox">
@@ -543,7 +543,7 @@ loadBtn.addEventListener("click", function(){
     htmlFileInput.click();
 });
 
-// LOGIKA ZA POSEBNO DUGME "CLEAR CACHE" - SPINER, BEZ INDEXEDDB, BEZ ZATVARANJA MENIJA, GASENJE SPINERA I RELOAD
+// LOGIKA ZA DUGME "CLEAR CACHE" - JEDINO MESTO GDE SE ČISTI KEŠ I PODACI
 clearCacheBtn.addEventListener("click", async function(){
     if (clearCacheBtn.disabled) return;
     clearCacheBtn.disabled = true;
@@ -564,12 +564,12 @@ clearCacheBtn.addEventListener("click", async function(){
 
     try {
         if (isOnUrl) {
-            // Ako smo na URL-u -> brišemo samo kolačiće preko tvoje Java metode
+            // Ako smo na URL-u -> brišemo kolačiće preko Jave
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearTrackingAndSession === 'function') {
                 window.AndroidBridgeSaver.clearTrackingAndSession();
             }
         } else {
-            // Ako smo na HTML-u -> brišemo lokalni storage i keš, a IndexedDB OSTAJE NETAKNUT!
+            // Ako smo na HTML-u -> brišemo lokalni storage i keš, a IndexedDB LDR_DB OSTAJE NETAKNUT!
             localStorage.clear();
             sessionStorage.clear();
             document.cookie.split(";").forEach(function(c) { 
@@ -584,7 +584,7 @@ clearCacheBtn.addEventListener("click", async function(){
         }
     } catch(err) {}
 
-    // Nakon 3 sekunde: gasimo spiner, otključavamo dugme i pozivamo Java reload glavnog prozora
+    // Nakon 3 sekunde: gasimo spiner, otključavamo dugme i pozivamo Java reload glavnog prozora (meni ostaje otvoren)
     setTimeout(() => {
         cacheSpinnerBox.classList.remove("spinning");
         clearCacheBtn.disabled = false;
@@ -597,26 +597,13 @@ clearCacheBtn.addEventListener("click", async function(){
     }, 3000);
 });
 
+// UVOZ FAJLA - NEMA BRISANJA KEŠA, SAMO UPIS NOVOG FAJLA
 htmlFileInput.addEventListener("change", async function(event){
     const file = event.target.files[0];
     if(file){
         const fileName = file.name ? file.name.toLowerCase() : "";
         if(file.type === "text/html" || file.type === "" || fileName.endsWith(".html") || fileName.endsWith(".htm")){
             
-            try {
-                localStorage.clear();
-                sessionStorage.clear();
-                document.cookie.split(";").forEach(function(c) { 
-                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                });
-                if ('caches' in window) {
-                    const cacheNames = await caches.keys();
-                    for (const name of cacheNames) {
-                        await caches.delete(name);
-                    }
-                }
-            } catch(err) {}
-
             if (window.AndroidBridgeSaver && typeof window.AndroidBridgeSaver.clearStartUrl === 'function') {
                 window.AndroidBridgeSaver.clearStartUrl();
             } else {
@@ -661,6 +648,7 @@ htmlFileInput.addEventListener("change", async function(event){
     }
 });
 
+// UNOS I UČITAVANJE URL-a - NEMA BRISANJA KEŠA, SAMO UPIS U CONFIG
 urlLoadBtn.addEventListener("click", async function(){
     let inputValue = startUrlInput.value.trim();
 
@@ -674,10 +662,6 @@ urlLoadBtn.addEventListener("click", async function(){
     } else {
         return; 
     }
-
-    try {
-        localStorage.clear();
-    } catch(err) {}
 
     await clearSavedApp(); 
 
