@@ -35,7 +35,8 @@ public class MediaService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("LFM APP")
                 .setContentText("Working in background...")
-                .setSmallIcon(android.R.drawable.ic_media_play)
+                //.setSmallIcon(android.R.drawable.ic_media_play)
+                .setSmallIcon(R.drawable.notification)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build();
