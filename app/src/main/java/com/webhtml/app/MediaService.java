@@ -37,6 +37,11 @@ public class MediaService extends Service {
                 .setContentText("Working in background..")
                 //.setSmallIcon(android.R.drawable.ic_media_play)
                 .setSmallIcon(R.drawable.notify)
+            
+                //0xFF176BF6; 0xFFE90400; 
+                .setColor(0xFFE90400) 
+                .setColorized(true)
+            
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build();
