@@ -33,15 +33,11 @@ public class MediaService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, flagsPending);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("LFM")
+                //.setContentTitle("LFM")
+                .setContentTitle(getString(R.string.app_name))
                 .setContentText("Working in background..")
                 //.setSmallIcon(android.R.drawable.ic_media_play)
                 .setSmallIcon(R.drawable.notify)
-            
-                //0xFF176BF6; 0xFFE90400; 
-                .setColor(0xFFE90400) 
-                .setColorized(true)
-            
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build();
