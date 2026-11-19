@@ -5,11 +5,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.Build;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,8 +26,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Keep;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -40,6 +37,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -52,36 +52,26 @@ public class MainActivity extends AppCompatActivity {
     private String broAgent = "";
     private boolean portrait = true;
     private boolean screenOn = false;
-    private boolean allowZoom = false;
+    private boolean allowZoom = false;    
     private boolean forceDark = false;
     private boolean refreshOn = false;
     private boolean scrollBar = true;
     private boolean mobilView = true;
     private boolean background = false;
     private WebView webView;
-    private WebView overlayWebView;
+    private WebView overlayWebView; 
     private MenuControler menuControler;
     private DownloadHelper downloadHelper;
-    private AllowCORS allowCORS;
 
     private ValueCallback<Uri[]> uploadMessage;
-    private ActivityResultLauncher<Intent> fileChooserLauncher;
+    private final static int FILE_CHOOSER_RESULT_CODE = 1;
 
     private final static int LOCATION_PERMISSION_REQUEST_CODE = 100;
     private final static int MEDIA_PERMISSION_REQUEST_CODE = 101;
-
+    
     private String pendingGeolocationOrigin;
     private GeolocationPermissions.Callback pendingGeolocationCallback;
     private PermissionRequest pendingPermissionRequest;
-
-    private void applyUserAgentPolicy(WebSettings targetSettings, Context ctx) {
-        if (targetSettings == null || ctx == null) return;
-        if (broAgent != null && !broAgent.trim().isEmpty()) {
-            targetSettings.setUserAgentString(broAgent.trim());
-        } else {
-            targetSettings.setUserAgentString(WebSettings.getDefaultUserAgent(ctx));
-        }
-    }
 
     @SuppressLint({"SetJavaScriptEnabled", "QueryPermissionsNeeded"})
     @Override
@@ -96,22 +86,6 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
 
-        fileChooserLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (uploadMessage == null) return;
-                    Uri[] results = null;
-                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                        String dataString = result.getData().getDataString();
-                        if (dataString != null) {
-                            results = new Uri[]{Uri.parse(dataString)};
-                        }
-                    }
-                    uploadMessage.onReceiveValue(results);
-                    uploadMessage = null;
-                }
-        );
-
         if (portrait) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
@@ -119,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         if (screenOn) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
-
+        
         FrameLayout rootLayout = new FrameLayout(this);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -131,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             webView = new WebView(this);
         }
-
+        
         webView.setBackgroundColor(Color.parseColor("#070707"));
         webView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -146,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             rootLayout.addView(refreshLayout);
         } else {
             rootLayout.addView(webView, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT, 
                 ViewGroup.LayoutParams.MATCH_PARENT
             ));
         }
@@ -165,17 +139,34 @@ public class MainActivity extends AppCompatActivity {
         overlayWebView.getSettings().setJavaScriptEnabled(true);
         overlayWebView.getSettings().setDomStorageEnabled(true);
         overlayWebView.getSettings().setAllowFileAccess(true);
+        overlayWebView.getSettings().setAllowFileAccessFromFileURLs(true);
+        overlayWebView.getSettings().setAllowUniversalAccessFromFileURLs(true);
         overlayWebView.setVisibility(View.GONE);
 
         overlayWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                return launchFileChooser(filePathCallback, fileChooserParams);
+                if (uploadMessage != null) {
+                    uploadMessage.onReceiveValue(null);
+                    uploadMessage = null;
+                }
+
+                uploadMessage = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+
+                try {
+                    startActivityForResult(intent, FILE_CHOOSER_RESULT_CODE);
+                } catch (Exception e) {
+                    uploadMessage = null;
+                    return false;
+                }
+
+                return true;
             }
         });
 
         overlayWebView.addJavascriptInterface(new ConfigSaverInterface(this), "AndroidBridgeSaver");
-
+        
         overlayWebView.addJavascriptInterface(new Object() {
             @Keep
             @JavascriptInterface
@@ -197,8 +188,11 @@ public class MainActivity extends AppCompatActivity {
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setSupportMultipleWindows(false);
@@ -208,59 +202,63 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setBuiltInZoomControls(allowZoom);
         webSettings.setDisplayZoomControls(false);
 
-        boolean setView = !mobilView;
+        boolean setView = !mobilView; 
         webSettings.setLoadWithOverviewMode(setView);
         webSettings.setUseWideViewPort(setView);
 
         webView.setVerticalScrollBarEnabled(scrollBar);
         webView.setHorizontalScrollBarEnabled(scrollBar);
 
-        String defaultWebViewUa = WebSettings.getDefaultUserAgent(this);
-        applyUserAgentPolicy(webSettings, this);
+        if (broAgent != null && !broAgent.trim().isEmpty()) {
+            webSettings.setUserAgentString(broAgent);
+        }
 
         if (forceDark) {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
                 WebSettingsCompat.setAlgorithmicDarkeningAllowed(webSettings, true);
-            } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                    && WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                applyLegacyForceDark(webSettings);
+            } else if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                @SuppressWarnings("deprecation")
+                boolean fallback = true;
+                WebSettingsCompat.setForceDark(webSettings, WebSettingsCompat.FORCE_DARK_ON);
             }
         }
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
-        allowCORS = new AllowCORS(this, webView, defaultWebViewUa);
-        allowCORS.register();
-
         webView.addJavascriptInterface(downloadHelper, "AndroidBridge");
         webView.addJavascriptInterface(new ConfigSaverInterface(this), "AndroidBridgeSaver");
 
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                if (menuControler != null && menuControler.isMenuVisible()) {
-                    menuControler.toggleMenu();
-                    return;
-                }
+        @Override
+        public void handleOnBackPressed() {
+        if (menuControler != null && menuControler.isMenuVisible()) {
+            menuControler.toggleMenu();
+            return;
+        }
 
-                android.webkit.WebBackForwardList history = webView.copyBackForwardList();
-                int currentIndex = history.getCurrentIndex();
+        android.webkit.WebBackForwardList history = webView.copyBackForwardList();
+        int currentIndex = history.getCurrentIndex();
 
-                if (currentIndex <= 0 || !webView.canGoBack()) {
-                    try {
-                        Intent serviceIntent = new Intent(MainActivity.this, MediaService.class);
-                        stopService(serviceIntent);
-                    } catch (Exception ignored) {}
+        // Ako smo na početku (indeks 0) ili nemamo gde nazad:
+        if (currentIndex <= 0 || !webView.canGoBack()) {
+            // 1. Zaustavi pozadinski servis i ukloni notifikaciju
+            try {
+                Intent serviceIntent = new Intent(MainActivity.this, MediaService.class);
+                stopService(serviceIntent);
+            } catch (Exception ignored) {}
 
-                    finish();
-                    android.os.Process.killProcess(android.os.Process.myPid());
-                    System.exit(0);
-                } else {
-                    webView.goBack();
-                }
-            }
-        });
+            // 2. Ugasi aktivnost i fizički ubij proces aplikacije iz memorije
+            // Ovo osigurava da sledeći put kreće potpuno od nule sa splash screen-om!
+            finish();
+            android.os.Process.killProcess(android.os.Process.myPid());
+            System.exit(0);
+        } else {
+            // Ako ima gde nazad, vrati stranicu
+            webView.goBack();
+        }
+    }
+});
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
             String rawSuggestedName = android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype);
@@ -319,9 +317,9 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (url.startsWith("file://") || url.startsWith("http://") || url.startsWith("https://")) {
-                    return false;
+                    return false; 
                 }
-
+                
                 if (url.startsWith("intent://")) {
                     try {
                         Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
@@ -375,48 +373,35 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                if (view == webView && url != null && url.startsWith("file://")) {
-                    view.evaluateJavascript("window.webhtml = true;", null);
-                    if (allowCORS != null) {
-                        allowCORS.injectFetchHook(view, url);
-                    }
-                }
-            }
-
-            @Override
             public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-
+            super.onPageFinished(view, url);
+                
                 if (view == webView) {
-                    if (url != null && url.startsWith("file://")) {
-                        view.evaluateJavascript("window.webhtml = true;", null);
-                        if (allowCORS != null) {
-                            allowCORS.injectFetchHook(view, url);
-                        }
-                    }
-
-                    if (background) {
-                        String antiPauseJs =
-                                "(function() {" +
-                                "   try {" +
-                                "       Object.defineProperty(document, 'hidden', { get: function() { return false; }, configurable: true });" +
-                                "       Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });" +
-                                "       Object.defineProperty(document, 'webkitHidden', { get: function() { return false; }, configurable: true });" +
-                                "       Object.defineProperty(document, 'webkitVisibilityState', { get: function() { return 'visible'; }, configurable: true });" +
-                                "   } catch(err) {}" +
-                                "})();";
-
-                        view.evaluateJavascript(antiPauseJs, null);
-                    }
+                if (url != null && url.startsWith("file://")) {
+                view.evaluateJavascript("window.webhtml = true;", null);
+                }
+                    
+               // AGRESIVNA JS ZAŠTITA - BACKGROUND PLAY..
+               if (background) {
+               String antiPauseJs = 
+               "(function() {" +
+               "   try {" +
+               "       Object.defineProperty(document, 'hidden', { get: function() { return false; }, configurable: true });" +
+               "       Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });" +
+               "       Object.defineProperty(document, 'webkitHidden', { get: function() { return false; }, configurable: true });" +
+               "       Object.defineProperty(document, 'webkitVisibilityState', { get: function() { return 'visible'; }, configurable: true });" +
+               "       } catch(err) {}" +
+               "       })();";
+        
+               view.evaluateJavascript(antiPauseJs, null);
+                   }
                 }
             }
-
+            
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String urlStr = request.getUrl().toString();
-
+                
                 if (urlStr.endsWith("appConfig.js")) {
                     try {
                         File configFile = new File(getFilesDir(), "appConfig.js");
@@ -427,6 +412,68 @@ public class MainActivity extends AppCompatActivity {
                     } catch (Exception ignored) {}
                 }
 
+                if (!urlStr.contains("#")) {
+                    return super.shouldInterceptRequest(view, request);
+                }
+
+                try {
+                    String[] mainParts = urlStr.split("#", 2);
+                    String cleanUrlStr = mainParts[0];
+                    String fragment = mainParts[1];
+
+                    String customUa = "";
+                    if (fragment.contains("ua=")) {
+                        try {
+                            String[] uaParts = fragment.split("ua=");
+                            if (uaParts.length > 1) {
+                                customUa = URLDecoder.decode(uaParts[1].split("&")[0], "UTF-8");
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    String finalUa;
+                    if (!customUa.isEmpty() && customUa.length() < 300) {
+                        finalUa = customUa;
+                    } else {
+                        finalUa = (!broAgent.isEmpty()) ? broAgent : webView.getSettings().getUserAgentString();
+                    }
+
+                    String lowerUa = finalUa.toLowerCase();
+                    boolean isHtmlMode = lowerUa.contains("mozilla");
+
+                    URL url = new URL(cleanUrlStr);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setRequestProperty("User-Agent", finalUa);
+                    
+                    if (isHtmlMode) {
+                        connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+                        connection.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                        connection.setRequestProperty("Upgrade-Insecure-Requests", "1");
+                    } else {
+                        connection.setRequestProperty("Accept", "application/json, application/ld+json, text/plain, */*");
+                    }
+                    
+                    connection.setConnectTimeout(10000);
+                    connection.setReadTimeout(10000);
+
+                    InputStream inputStream = connection.getInputStream();
+                    String mimeType = connection.getContentType();
+                    if (mimeType == null) {
+                        mimeType = isHtmlMode ? "text/html; charset=UTF-8" : "application/json; charset=UTF-8";
+                    }
+                    
+                    String encoding = "UTF-8";
+                    if (mimeType.contains("charset=")) {
+                        try {
+                            encoding = mimeType.split("charset=")[1].split(";")[0].trim();
+                        } catch (Exception ignored) {}
+                    }
+
+                    return new WebResourceResponse(mimeType.split(";")[0].trim(), encoding, inputStream);
+
+                } catch (Exception e) {}
+                
                 return super.shouldInterceptRequest(view, request);
             }
         });
@@ -440,7 +487,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                if (androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this,
+                if (androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this, 
                         android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     callback.invoke(origin, true, false);
                 } else {
@@ -464,11 +511,11 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 java.util.ArrayList<String> permissionsToRequest = new java.util.ArrayList<>();
-                if (needsCamera && androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this,
+                if (needsCamera && androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this, 
                         android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(android.Manifest.permission.CAMERA);
                 }
-                if (needsAudio && androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this,
+                if (needsAudio && androidx.core.content.ContextCompat.checkSelfPermission(MainActivity.this, 
                         android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     permissionsToRequest.add(android.Manifest.permission.RECORD_AUDIO);
                 }
@@ -485,10 +532,26 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                return launchFileChooser(filePathCallback, fileChooserParams);
+                if (uploadMessage != null) {
+                    uploadMessage.onReceiveValue(null);
+                    uploadMessage = null;
+                }
+
+                uploadMessage = filePathCallback;
+                Intent intent = fileChooserParams.createIntent();
+
+                try {
+                    startActivityForResult(intent, FILE_CHOOSER_RESULT_CODE);
+                } catch (Exception e) {
+                    uploadMessage = null;
+                    return false;
+                }
+
+                return true;
             }
         });
 
+        // Traženje dozvole za notifikacije na Androidu 13+ ISKLJUČIVO ako je background uključen
         if (background && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 androidx.core.app.ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 102);
@@ -502,30 +565,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean launchFileChooser(ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
-        if (uploadMessage != null) {
-            uploadMessage.onReceiveValue(null);
-            uploadMessage = null;
-        }
-
-        uploadMessage = filePathCallback;
-        Intent intent = fileChooserParams.createIntent();
-
-        try {
-            fileChooserLauncher.launch(intent);
-        } catch (Exception e) {
-            uploadMessage = null;
-            return false;
-        }
-
-        return true;
-    }
-
-    @SuppressWarnings("deprecation")
-    private void applyLegacyForceDark(WebSettings settings) {
-        WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_ON);
-    }
-
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (menuControler != null && menuControler.handleTouchEvent(event)) {
@@ -536,7 +575,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadConfigFromInternalStorage() {
         File configFile = new File(getFilesDir(), "appConfig.js");
-
+        
         if (!configFile.exists()) {
             copyAssetToFile("appConfig.js", configFile);
         }
@@ -552,13 +591,13 @@ public class MainActivity extends AppCompatActivity {
             broAgent = parseString(jsContent, "broAgent", "");
             portrait = parseBoolean(jsContent, "portrait", true);
             screenOn = parseBoolean(jsContent, "screenOn", false);
-            allowZoom = parseBoolean(jsContent, "allowZoom", false);
+            allowZoom = parseBoolean(jsContent, "allowZoom", false); 
             forceDark = parseBoolean(jsContent, "forceDark", false);
             refreshOn = parseBoolean(jsContent, "refreshOn", false);
             scrollBar = parseBoolean(jsContent, "scrollBar", true);
             mobilView = parseBoolean(jsContent, "mobilView", true);
             background = parseBoolean(jsContent, "background", false);
-
+                    
         } catch (Exception e) {
             copyAssetToFile("appConfig.js", configFile);
             loadConfigFromInternalStorage();
@@ -632,9 +671,9 @@ public class MainActivity extends AppCompatActivity {
                     fis.read(buffer);
                     fis.close();
                     String content = new String(buffer, "UTF-8");
-
+                    
                     String updated = content.replaceAll("startURL\\s*:\\s*[\"'][^\"']*[\"']", "startURL: \"\"");
-
+                    
                     FileOutputStream fos = new FileOutputStream(configFile);
                     fos.write(updated.getBytes());
                     fos.close();
@@ -674,22 +713,24 @@ public class MainActivity extends AppCompatActivity {
         @Keep
         @JavascriptInterface
         public void reloadWebView() {
-            if (mContext instanceof MainActivity) {
-                ((MainActivity) mContext).runOnUiThread(() -> {
-                    MainActivity act = (MainActivity) mContext;
-                    if (act.webView != null) {
-                        act.loadConfigFromInternalStorage();
-                        act.applyUserAgentPolicy(act.webView.getSettings(), act);
-
-                        if (act.startURL != null && !act.startURL.trim().isEmpty() && !act.startURL.startsWith("file:///")) {
-                            act.webView.loadUrl(act.startURL);
-                        } else {
-                            act.webView.clearHistory();
-                            act.webView.reload();
-                        }
+        if (mContext instanceof MainActivity) {
+        ((MainActivity) mContext).runOnUiThread(() -> {
+            MainActivity act = (MainActivity) mContext;
+            if (act.webView != null) {
+                // Osvežavamo konfiguraciju iz memorije da budemo sigurni šta je aktuelno
+                act.loadConfigFromInternalStorage();
+                
+                if (act.startURL != null && !act.startURL.trim().isEmpty() && !act.startURL.startsWith("file:///")) {
+                    // Ako je podešen URL, učitaj ga ponovo
+                    act.webView.loadUrl(act.startURL);
+                } else {
+                    // Ako je HTML fajl u pitanju, očisti istoriju unazad da se ne vraća na staro i uradi reload
+                    act.webView.clearHistory();
+                    act.webView.reload();
                     }
-                });
-            }
+                 }
+             });
+           }
         }
 
         @Keep
@@ -716,24 +757,25 @@ public class MainActivity extends AppCompatActivity {
         @Keep
         @JavascriptInterface
         public void clearTrackingAndSession(String url) {
-            try {
-                android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
-                String cookies = cookieManager.getCookie(url);
-                if (cookies != null) {
-                    String[] cookiePairs = cookies.split(";");
-                    for (String cookiePair : cookiePairs) {
-                        String[] parts = cookiePair.split("=", 2);
-                        if (parts.length > 0) {
-                            String cookieName = parts[0].trim();
-                            String expiredCookie = cookieName + "=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/";
-                            cookieManager.setCookie(url, expiredCookie);
-                        }
-                    }
-                    cookieManager.flush();
-                }
-            } catch (Exception ignored) {}
+        try {
+        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        String cookies = cookieManager.getCookie(url);
+        if (cookies != null) {
+            String[] cookiePairs = cookies.split(";");
+            for (String cookiePair : cookiePairs) {
+                String[] parts = cookiePair.split("=", 2);
+                if (parts.length > 0) {
+                    String cookieName = parts[0].trim();
+                    // Poništavamo kolačić za dati URL postavljanjem datuma isteka u prošlost
+                    String expiredCookie = cookieName + "=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/";
+                    cookieManager.setCookie(url, expiredCookie);
+                   }
+                 }
+                cookieManager.flush();
+              }
+           } catch (Exception ignored) {}
         }
-
+    
         @Keep
         @JavascriptInterface
         public void clearHistory() {
@@ -747,7 +789,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
+    
     private boolean parseBoolean(String content, String key, boolean defaultValue) {
         try {
             Pattern pattern = Pattern.compile(key + "\\s*:\\s*(true|false)", Pattern.CASE_INSENSITIVE);
@@ -791,26 +833,28 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        super.onStop();
-
-        if (background && !isFinishing()) {
-            try {
-                Intent serviceIntent = new Intent(this, MediaService.class);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent);
-                } else {
-                    startService(serviceIntent);
-                }
-            } catch (Exception ignored) {}
-        }
+    super.onStop();
+    
+    // Servis se pali SAMO ako je background uključen 
+    // I ako se aktivnost NE gasi (zato što je pritisnut Home ili Recents, a NE Back!)
+    if (background && !isFinishing()) {
+        try {
+            Intent serviceIntent = new Intent(this, MediaService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception ignored) {}
     }
+}
 
     @Override
     protected void onPause() {
         super.onPause();
         if (webView != null) {
             if (!background) {
-                webView.onPause();
+                webView.onPause(); 
             }
         }
         if (overlayWebView != null) overlayWebView.onPause();
@@ -821,7 +865,8 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (webView != null) webView.onResume();
         if (overlayWebView != null) overlayWebView.onResume();
-
+        
+        // Čim se korisnik vrati u aplikaciju, gasimo pozadinski servis i sklanjamo notifikaciju
         if (background) {
             try {
                 Intent serviceIntent = new Intent(this, MediaService.class);
@@ -857,6 +902,23 @@ public class MainActivity extends AppCompatActivity {
                 }
                 pendingPermissionRequest = null;
             }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+            if (uploadMessage == null) return;
+            Uri[] results = null;
+            if (resultCode == Activity.RESULT_OK && intent != null) {
+                String dataString = intent.getDataString();
+                if (dataString != null) {
+                    results = new Uri[]{Uri.parse(dataString)};
+                }
+            }
+            uploadMessage.onReceiveValue(results);
+            uploadMessage = null;
         }
     }
 
